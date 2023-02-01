@@ -15,10 +15,10 @@ And...
 Key points about the desired environment:
 
 * Defined architecture in a public cloud preferably AWS or GCP with:
-- Pass through layers of ingestion, processing, storage, consumption, analysis, security and governance;
-- Gradual replacement of on-premises;
-- Include technologies to enable real-time data analysis;
-- The architecture must have components that allow the company to organize and supply data to Analytics, Data Science,
-API's and services for integration with applications. It's emphasized that necessarily the company needs to keep the 
-communication between on-premises and cloud to various purposes.
+    - Pass through layers of ingestion, processing, storage, consumption, analysis, security and governance;
+    - Gradual replacement of on-premises;
+    - Include technologies to enable real-time data analysis;
+    - The architecture must have components that allow the company to organize and supply data to Analytics, Data Science,
+    API's and services for integration with applications. It's emphasized that necessarily the company needs to keep the 
+    communication between on-premises and cloud to various purposes.
 * Detail the motivation for choosing the components, with their advantages, disadvantages and risks
