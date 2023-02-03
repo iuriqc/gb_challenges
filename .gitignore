@@ -1,3 +1,10 @@
 .DS_Store
+
 *.pdf
 *.txt
+
+**/.terraform/*
+.terraform.lock.hcl
+*.tfstate
+*.tfstate.*
+*.json
