@@ -33,6 +33,4 @@
     > gsutil -m cp -r /Users/iuriqc/Desktop/applications/gb_challenges/second-case/files/* gs://gb-challenge-bucket/files
     ```
 
-8. Create a service account to Airflow with BigQuery Job User role (just BQ will be used here) and a JSON key and add content of the key to an Airflow Connection
-
-9. 
+8. Create a service account to Airflow with BigQuery Job User role (just BQ will be used here) and a JSON key and add content of the key to Secret Manager and use it in Airflow Connection (you need to grant access to service account used in Compute Engine)
