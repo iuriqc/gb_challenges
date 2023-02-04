@@ -28,11 +28,11 @@
    - Configure git-sync for your DAG folder [here](https://airflow.apache.org/docs/helm-chart/stable/manage-dags-files.html)
      - You can use the yaml file here, after create a ssh-key and add to GitHub
 
-7. Copy files, DAG and script to GCS
+7. Copy files to GCS
     ```
     > gsutil -m cp -r /Users/iuriqc/Desktop/applications/gb_challenges/second-case/files/* gs://gb-challenge-bucket/files
-
-    > gsutil -m cp -r /Users/iuriqc/Desktop/applications/gb_challenges/second-case/dag/* gs://gb-challenge-bucket/dag
-
-    > gsutil -m cp -r /Users/iuriqc/Desktop/applications/gb_challenges/second-case/script/* gs://gb-challenge-bucket/script
     ```
+
+8. Create a service account to Airflow with BigQuery Job User role (just BQ will be used here) and a JSON key and add content of the key to an Airflow Connection
+
+9. 
