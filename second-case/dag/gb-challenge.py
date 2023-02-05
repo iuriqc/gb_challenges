@@ -153,7 +153,7 @@ with DAG(
             }
         )
 
-        create_view_table
+        fill_raw_table >> create_view_table
         TASKS.append(create_view_table)
 
     end = DummyOperator(task_id="end", dag=dag)
