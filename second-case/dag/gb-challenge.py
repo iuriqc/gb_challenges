@@ -17,7 +17,7 @@ from helper.sqls import *
 from helper.keys import *
 
 GIT_URL = 'https://github.com/iuriqc/gb_challenges/tree/main/second-case/files'
-REGEX = r"Base_[0-9]{4}\.xlsx$"
+REGEX = r"Base_[0-9]{4}\.csv$"
 
 PROJECT_ID = 'gb-challenge'
 DATASET_ID = 'TABLES'
@@ -70,7 +70,7 @@ with DAG(
 
         logging.info("Reading files...")
         for file in files:
-            df = pd.read_excel(file)
+            df = pd.read_csv(file)
             table = pd.concat([table,df], ignore_index=True)
         logging.info("Process finished")
 
