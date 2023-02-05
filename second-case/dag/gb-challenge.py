@@ -134,6 +134,8 @@ with DAG(
         dag=dag,
     )
 
+    end = DummyOperator(task_id="end", dag=dag)
+
     tables_list = [f'TABELA_{i}' for i in range(1,5)]
     for table in tables_list:
         create_view_table = BigQueryInsertJobOperator(
@@ -152,8 +154,6 @@ with DAG(
                 }
             }
         )
-
-        end = DummyOperator(task_id="end", dag=dag)
 
         fill_raw_table >> create_view_table >> end
         TASKS.append(create_view_table)
