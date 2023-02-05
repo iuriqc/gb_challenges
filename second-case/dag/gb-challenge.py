@@ -67,6 +67,7 @@ with DAG(
 
     create_table = BigQueryCreateEmptyTableOperator(
             task_id="create_raw_table",
+            conn_id="airflow-to-bq"
             project_id=PROJECT_ID,
             dataset_id=DATASET_ID,
             table_id=TABLE_RAW.split('.')[1],
@@ -82,6 +83,7 @@ with DAG(
     
     fill_table = PythonOperator(
         task_id="fill_raw_table",
+        conn_id="airflow-to-bq"
         python_callable=create_raw_table_bq,
         op_kwargs={
             "project_id":PROJECT_ID,
