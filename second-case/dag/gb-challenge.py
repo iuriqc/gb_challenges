@@ -64,7 +64,7 @@ with DAG(
         pandas_gbq.to_gbq(df, table_id=table_id, project_id=project_id)
         logging.info("Table created")
     
-    start = DummyOperator(task_id="start",dag=dag)
+    start = DummyOperator(task_id="start", dag=dag)
 
     create_dataset = BigQueryCreateEmptyDatasetOperator(
         task_id="create_dataset",
@@ -100,4 +100,6 @@ with DAG(
         dag=dag,
     )
 
-    start >> create_dataset >> create_table >> fill_table
+    end = DummyOperator(task_id="end", dag=dag)
+
+    start >> create_dataset >> create_table >> fill_table >> end
