@@ -5,7 +5,6 @@ import pandas as pd
 import pandas_gbq
 import requests
 from bs4 import BeautifulSoup
-import tweepy as tw
 from airflow.models import DAG
 from airflow.models.baseoperator import chain
 from airflow.operators.dummy_operator import DummyOperator
@@ -13,7 +12,7 @@ from airflow.operators.dummy_operator import DummyOperator
 from airflow.contrib.hooks.gcp_api_base_hook import GoogleCloudBaseHook
 from airflow.providers.google.cloud.operators.bigquery import (BigQueryCreateEmptyTableOperator, 
 BigQueryCreateEmptyDatasetOperator, BigQueryInsertJobOperator)
-from airflow.operators.python import PythonOperator
+from airflow.operators.python import PythonOperator, PythonVirtualenvOperator
 from helper.sqls import *
 from helper.keys import *
 
@@ -125,6 +124,8 @@ with DAG(
                               access_token_secret:str,
                               ):
         """Get data from Twitter"""
+        import tweepy as tw
+
         client = tw.Client(bearer_token=bearer_token,
                    consumer_key=consumer_key, 
                    consumer_secret=consumer_secret, 
@@ -222,8 +223,9 @@ with DAG(
         schema_fields=TABLE_FINAL_SCHEMA
     )
 
-    best_selling_line = PythonOperator(
+    best_selling_line = PythonVirtualenvOperator(
         task_id="best_selling_line",
+        requirements="tweepy",
         python_callable=fill_table_bq,
         op_kwargs={
             "df":get_data_from_twitter(bearer_token, 
