@@ -19,6 +19,14 @@ REGEX = r"Base_[0-9]{4}\.xlsx$"
 PROJECT_ID = 'gb-challenge'
 DATASET_ID = 'tables'
 TABLE_RAW = 'tables.raw'
+TABLE_RAW_SCHEMA = [
+                {"name": "ID_MARCA", "type": "INTEGER", "mode": "REQUIRED"},
+                {"name": "MARCA", "type": "STRING", "mode": "REQUIRED"},
+                {"name": "ID_LINHA", "type": "INTEGER", "mode": "REQUIRED"},
+                {"name": "LINHA", "type": "STRING", "mode": "REQUIRED"},
+                {"name": "DATA_VENDA", "type": "DATE", "mode": "REQUIRED"},
+                {"name": "QTD_VENDA", "type": "INTEGER", "mode": "REQUIRED"},
+            ]
 CONN_ID = "airflow-to-bq"
 
 with DAG(
@@ -66,7 +74,7 @@ with DAG(
 
         return credentials
 
-    def fill_raw_table_bq(project_id:str, table_id:str, if_exists:str):
+    def fill_raw_table_bq(project_id:str, table_id:str, if_exists:str, table_schema:list):
         """
         Create raw table in BigQuery
         """
@@ -75,7 +83,13 @@ with DAG(
         credentials = get_credentials(CONN_ID)
 
         logging.info("Saving table in BQ")
-        pandas_gbq.to_gbq(df, table_id, project_id, if_exists, credentials=credentials)
+        pandas_gbq.to_gbq(df, 
+                          table_id, 
+                          project_id=project_id, 
+                          if_exists=if_exists, 
+                          credentials=credentials, 
+                          table_schema=table_schema,
+                          )
         logging.info("Table created")
 
     start = DummyOperator(task_id="start", dag=dag)
@@ -101,14 +115,7 @@ with DAG(
             project_id=PROJECT_ID,
             dataset_id=DATASET_ID,
             table_id=TABLE_RAW.split('.')[1],
-            schema_fields=[
-                {"name": "ID_MARCA", "type": "INTEGER", "mode": "REQUIRED"},
-                {"name": "MARCA", "type": "STRING", "mode": "REQUIRED"},
-                {"name": "ID_LINHA", "type": "INTEGER", "mode": "REQUIRED"},
-                {"name": "LINHA", "type": "STRING", "mode": "REQUIRED"},
-                {"name": "DATA_VENDA", "type": "DATE", "mode": "REQUIRED"},
-                {"name": "QTD_VENDA", "type": "INTEGER", "mode": "REQUIRED"},
-            ]
+            schema_fields=TABLE_RAW_SCHEMA
         )
 
     fill_table = PythonOperator(
@@ -118,6 +125,7 @@ with DAG(
             "project_id":PROJECT_ID,
             "table_id":TABLE_RAW,
             "if_exists":"replace",
+            "table_schema":TABLE_RAW_SCHEMA,
         },
         dag=dag,
     )
