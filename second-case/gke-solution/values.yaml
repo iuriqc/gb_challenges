@@ -568,7 +568,8 @@ workers:
   extraVolumeMounts: 
     - name: requirements
     # Change it for your path
-      mountPath: /Users/iuriqc/Desktop/applications/gb_challenges/second-case/gke-solution/
+      mountPath: /Users/iuriqc/Desktop/applications/gb_challenges/second-case/gke-solution/requirements.txt
+      subPath: requirements.txt
 
   extraVolumes: 
     - name: requirements
@@ -700,7 +701,8 @@ scheduler:
   extraVolumeMounts: 
     - name: requirements
     # Change it for your path
-      mountPath: /Users/iuriqc/Desktop/applications/gb_challenges/second-case/gke-solution/
+      mountPath: /Users/iuriqc/Desktop/applications/gb_challenges/second-case/gke-solution/requirements.txt
+      subPath: requirements.txt
 
   extraVolumes: 
     - name: requirements
@@ -979,7 +981,8 @@ webserver:
   extraVolumeMounts: 
     - name: requirements
     # Change it for your path
-      mountPath: /Users/iuriqc/Desktop/applications/gb_challenges/second-case/gke-solution/
+      mountPath: /Users/iuriqc/Desktop/applications/gb_challenges/second-case/gke-solution/requirements.txt
+      subPath: requirements.txt
 
   extraVolumes: 
     - name: requirements
