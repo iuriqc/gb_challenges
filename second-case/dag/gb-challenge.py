@@ -1,25 +1,92 @@
 from datetime import datetime
 import logging
 import os
+import re
 from os import path
 import pandas as pd
+import pandas_gbq
+import requests
+from bs4 import BeautifulSoup
 from airflow.models import DAG
 from airflow.operators.dummy_operator import DummyOperator
+from airflow.providers.google.cloud.operators.bigquery import BigQueryCreateEmptyTableOperator
 from airflow.operators.python import PythonOperator
 from airflow.providers.google.cloud.hooks.gcs import GCSHook
 
-default_args={
-    "start_date": datetime(2023, 2, 4),
-    "depends_on_past": False
-    }
+GIT_URL = 'https://github.com/iuriqc/gb_challenges/tree/main/second-case/files'
+REGEX = r"Base_[0-9]{4}\.xlsx$"
+
+PROJECT_ID = 'gb-challenge'
+DATASET_ID = 'tables'
+TABLE_RAW = 'tables.raw'
 
 with DAG(
-    "teste",
-    default_args = default_args,
-    schedule_interval = None,
-    tags = ['teste'],
-    description = 'Teste',
-    catchup = False 
+    dag_id="teste",
+    schedule_interval=None,
+    start_date=datetime(2023, 2, 4),
+    catchup=False,
+    depends_on_past=False,
+    tags=['teste'],
+    description='Teste',
 ) as dag:
+
+    def get_data_from_git(url:str, files_regex):
+        """
+        Function to read files from GitHub repo and return a dataframe
+        """
+        reqs = requests.get(url)
+        soup = BeautifulSoup(reqs.text, 'html.parser')
+
+        files = []
+
+        for link in soup.find_all('a'):
+            result = link.get('href')
+            if re.search(files_regex, result):
+                files.append(f"https://github.com{result}?raw=true")
+            else:
+                pass
+        
+        table = pd.DataFrame()
+
+        for file in files:
+            df = pd.read_excel(file)
+            table = pd.concat([table,df], ignore_index=True)
+        
+        return table
+    
+    def create_raw_table_bq(project_id:str, table_id:str):
+        """
+        Create raw table in BigQuery
+        """
+        df = get_data_from_git(GIT_URL, REGEX)
+
+        pandas_gbq.to_gbq(df, table_id=table_id, project_id=project_id)
     
     start = DummyOperator(task_id="start",dag=dag)
+
+    create_table = BigQueryCreateEmptyTableOperator(
+            task_id="create_raw_table",
+            project_id=PROJECT_ID,
+            dataset_id=DATASET_ID,
+            table_id=TABLE_RAW.split('.')[1],
+            schema_fields=[
+                {"name": "ID_MARCA", "type": "INTEGER", "mode": "REQUIRED"},
+                {"name": "MARCA", "type": "STRING", "mode": "REQUIRED"},
+                {"name": "ID_LINHA", "type": "INTEGER", "mode": "REQUIRED"},
+                {"name": "LINHA", "type": "STRING", "mode": "REQUIRED"},
+                {"name": "DATA_VENDA", "type": "DATE", "mode": "REQUIRED"},
+                {"name": "QTD_VENDA", "type": "INTEGER", "mode": "REQUIRED"},
+            ]
+        )
+    
+    fill_table = PythonOperator(
+        task_id="fill_raw_table",
+        python_callable=create_raw_table_bq,
+        op_kwargs={
+            "project_id":PROJECT_ID,
+            "table_id":TABLE_RAW,
+        },
+        dag=dag,
+    )
+
+    start >> create_table >> fill_table
