@@ -2,6 +2,7 @@
 
 *.pdf
 *.txt
+!requirements.txt
 
 **/.terraform/*
 .terraform.lock.hcl
