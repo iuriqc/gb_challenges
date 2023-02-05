@@ -101,8 +101,8 @@ with DAG(
 
     check_pip = BashOperator(
       task_id="pip_task",
-      bash_command='pip freeze',
-      #bash_command='pip install openpyxl',
+      #bash_command='pip freeze',
+      bash_command='pip install openpyxl',
       dag=dag,
   )
 
