@@ -16,6 +16,6 @@ with DAG(
       task_id="pip_task",
       bash_command='pip install openpyxl tweepy',
       dag=dag,
-  )
+    )
 
     check_pip
