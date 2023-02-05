@@ -62,7 +62,7 @@ with DAG(
         df = get_data_from_git(GIT_URL, REGEX)
 
         logging.info("Saving table in BQ")
-        pandas_gbq.to_gbq(df, table_id=table_id, project_id=project_id)
+        pandas_gbq.to_gbq(df, table_id, project_id=project_id)
         logging.info("Table created")
     
     start = DummyOperator(task_id="start", dag=dag)
