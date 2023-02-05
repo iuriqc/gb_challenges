@@ -177,8 +177,9 @@ with DAG(
         schema_fields=TABLE_RAW_SCHEMA
     )
 
-    fill_raw_table = PythonOperator(
+    fill_raw_table = PythonVirtualenvOperator(
         task_id="fill_raw_table",
+        requirements="openpyxl",
         python_callable=fill_table_bq,
         op_kwargs={
             "df":get_data_from_git(GIT_URL, REGEX),
