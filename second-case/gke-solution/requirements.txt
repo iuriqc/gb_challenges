@@ -1,4 +1,5 @@
 pandas
+openpyxl
 pandas_gbq
 requests
 beautifulsoup4
