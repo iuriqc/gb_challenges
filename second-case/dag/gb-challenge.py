@@ -7,6 +7,7 @@ import requests
 from bs4 import BeautifulSoup
 from airflow.models import DAG
 from airflow.operators.dummy_operator import DummyOperator
+from airflow.operators.bash import BashOperator
 from airflow.providers.google.cloud.operators.bigquery import (BigQueryCreateEmptyTableOperator, 
 BigQueryCreateEmptyDatasetOperator)
 from airflow.operators.python import PythonOperator
@@ -66,6 +67,11 @@ with DAG(
     
     start = DummyOperator(task_id="start", dag=dag)
 
+    check_pip = BashOperator(
+      task_id="pip_task",
+      bash_command='pip freeze',
+  )
+
     create_dataset = BigQueryCreateEmptyDatasetOperator(
         task_id="create_dataset",
         gcp_conn_id="airflow-to-bq",
@@ -102,4 +108,4 @@ with DAG(
 
     end = DummyOperator(task_id="end", dag=dag)
 
-    start >> create_dataset >> create_table >> fill_table >> end
+    start >> check_pip >> create_dataset >> create_table >> fill_table >> end
