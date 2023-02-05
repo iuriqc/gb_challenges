@@ -8,7 +8,7 @@ from bs4 import BeautifulSoup
 from airflow.models import DAG
 from airflow.operators.dummy_operator import DummyOperator
 from airflow.operators.bash import BashOperator
-from airflow.providers.google.common.hooks.base_google import GoogleBaseHook
+from airflow.contrib.hooks.gcp_api_base_hook import GoogleCloudBaseHook
 from airflow.providers.google.cloud.operators.bigquery import (BigQueryCreateEmptyTableOperator, 
 BigQueryCreateEmptyDatasetOperator)
 from airflow.operators.python import PythonOperator
@@ -63,8 +63,8 @@ with DAG(
         """
         df = get_data_from_git(GIT_URL, REGEX)
 
-        bq = GoogleBaseHook(gcp_conn_id=CONN_ID)
-        credentials = bq.get_credentials()
+        gcp = GoogleCloudBaseHook(gcp_conn_id=CONN_ID)
+        credentials = gcp._get_credentials()
 
         logging.info("Saving table in BQ")
         pandas_gbq.to_gbq(df, table_id, project_id, if_exists='replace', credentials=credentials)
