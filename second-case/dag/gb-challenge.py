@@ -12,7 +12,7 @@ from airflow.operators.bash import BashOperator
 from airflow.contrib.hooks.gcp_api_base_hook import GoogleCloudBaseHook
 from airflow.providers.google.cloud.operators.bigquery import (BigQueryCreateEmptyTableOperator, 
 BigQueryCreateEmptyDatasetOperator, BigQueryInsertJobOperator)
-from airflow.operators.python import PythonOperator, PythonVirtualenvOperator
+from airflow.operators.python import PythonVirtualenvOperator
 from helper.sqls import *
 from helper.keys import *
 
