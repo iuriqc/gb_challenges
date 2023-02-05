@@ -63,7 +63,7 @@ with DAG(
         """
         df = get_data_from_git(GIT_URL, REGEX)
 
-        bq = BigQueryHook(bigquery_conn_id=CONN_ID)
+        bq = BigQueryHook(bigquery_conn_id=CONN_ID, delegate_to=None, use_legacy_sql=True, location='US')
         credentials = bq.get_conn()
 
         logging.info("Saving table in BQ")
