@@ -5,7 +5,7 @@ import pandas as pd
 import pandas_gbq
 import requests
 from bs4 import BeautifulSoup
-from google.oauth2 import service_account
+import google.auth
 from airflow.models import DAG
 from airflow.operators.dummy_operator import DummyOperator
 from airflow.operators.bash import BashOperator
@@ -62,8 +62,14 @@ with DAG(
         """
         df = get_data_from_git(GIT_URL, REGEX)
 
+        credentials, project = google.auth.default(
+            scopes=[
+                'https://www.googleapis.com/auth/cloud-platform',
+                ]
+        )
+
         logging.info("Saving table in BQ")
-        pandas_gbq.to_gbq(df, table_id, project_id, if_exists='replace')
+        pandas_gbq.to_gbq(df, table_id, project_id, if_exists='replace', credentials=credentials)
         logging.info("Table created")
     
     start = DummyOperator(task_id="start", dag=dag)
