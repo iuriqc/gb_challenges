@@ -5,6 +5,7 @@ import pandas as pd
 import pandas_gbq
 import requests
 from bs4 import BeautifulSoup
+import tweepy as tw
 from airflow.models import DAG
 from airflow.models.baseoperator import chain
 from airflow.operators.dummy_operator import DummyOperator
@@ -14,6 +15,7 @@ from airflow.providers.google.cloud.operators.bigquery import (BigQueryCreateEmp
 BigQueryCreateEmptyDatasetOperator, BigQueryInsertJobOperator, BigQueryGetDataOperator)
 from airflow.operators.python import PythonOperator
 from helper.sqls import *
+from helper.keys import *
 
 GIT_URL = 'https://github.com/iuriqc/gb_challenges/tree/main/second-case/files'
 REGEX = r"Base_[0-9]{4}\.xlsx$"
@@ -21,6 +23,7 @@ REGEX = r"Base_[0-9]{4}\.xlsx$"
 PROJECT_ID = 'gb-challenge'
 DATASET_ID = 'TABLES'
 TABLE_RAW = 'TABLES.RAW'
+TABLE_FINAL = 'TABLES.FINAL'
 TABLE_RAW_SCHEMA = [
                 {"name": "ID_MARCA", "type": "INTEGER", "mode": "REQUIRED"},
                 {"name": "MARCA", "type": "STRING", "mode": "REQUIRED"},
@@ -28,6 +31,10 @@ TABLE_RAW_SCHEMA = [
                 {"name": "LINHA", "type": "STRING", "mode": "REQUIRED"},
                 {"name": "DATA_VENDA", "type": "DATE", "mode": "REQUIRED"},
                 {"name": "QTD_VENDA", "type": "INTEGER", "mode": "REQUIRED"},
+            ]
+TABLE_FINAL_SCHEMA = [
+                {"name": "NOME", "type": "STRING", "mode": "REQUIRED"},
+                {"name": "TEXTO", "type": "STRING", "mode": "REQUIRED"},
             ]
 CONN_ID = "airflow-to-bq"
 
@@ -79,23 +86,69 @@ with DAG(
 
         return credentials
 
-    def fill_raw_table_bq(project_id:str, table_id:str, if_exists:str, table_schema:list):
+    def fill_table_bq(df, project_id:str, table_id:str, if_exists:str, table_schema:list):
         """
         Create raw table in BigQuery
         """
-        df = get_data_from_git(GIT_URL, REGEX)
-
         credentials = get_credentials(CONN_ID)
 
-        logging.info("Saving table in BQ")
-        pandas_gbq.to_gbq(df, 
-                          table_id, 
+        logging.info(f"Saving table {table_id} in BQ")
+        pandas_gbq.to_gbq(df=df, 
+                          table_id=table_id, 
                           project_id=project_id, 
                           if_exists=if_exists, 
                           credentials=credentials, 
                           table_schema=table_schema,
                           )
         logging.info("Table created")
+    
+    def get_best_selling_line(query:str, project_id:str, max_results:int):
+        """
+        Get Best Selling Line in 12/2019
+        """
+        credentials = get_credentials(CONN_ID)
+
+        logging.info("Reading data from BQ")
+        df = pandas_gbq.read_gbq(query=query, 
+                          project_id=project_id, 
+                          credentials=credentials, 
+                          max_results=max_results,
+                          )
+        logging.info("Data fetched")
+
+        return df['LINHA'][0]
+    
+    def get_data_from_twitter(bearer_token:str,
+                              consumer_key:str,
+                              consumer_secret:str,
+                              access_token:str,
+                              access_token_secret:str,
+                              ):
+        """Get data from Twitter"""
+        client = tw.Client(bearer_token=bearer_token,
+                   consumer_key=consumer_key, 
+                   consumer_secret=consumer_secret, 
+                   access_token=access_token, 
+                   access_token_secret=access_token_secret,
+                   return_type=dict,
+                  )
+        
+        best_selling_line = get_best_selling_line(sql_best_selling_line,PROJECT_ID,1)
+        
+        tweets = client.search_recent_tweets(query=f'boticario {best_selling_line} lang:pt',
+                                       max_results=50,
+                                       tweet_fields = 'author_id',
+                                       expansions='author_id',
+                                      )
+        
+        users = pd.DataFrame.from_dict(tweets['includes']['users'])
+        data = pd.DataFrame.from_dict(tweets['data']).drop(['id','edit_history_tweet_ids'], axis=1)
+        data.rename(columns={'author_id': 'id'}, inplace=True)
+
+        result = users.merge(data,on='id',how='inner').drop(['id','name'], axis=1)
+        result.rename(columns={'username': 'NOME','text': 'TEXTO'}, inplace=True)
+
+        return result
 
     start = DummyOperator(task_id="start", dag=dag)
 
@@ -115,18 +168,19 @@ with DAG(
     )
 
     create_raw_table = BigQueryCreateEmptyTableOperator(
-            task_id="create_raw_table",
-            gcp_conn_id=CONN_ID,
-            project_id=PROJECT_ID,
-            dataset_id=DATASET_ID,
-            table_id=TABLE_RAW.split('.')[1],
-            schema_fields=TABLE_RAW_SCHEMA
-        )
+        task_id="create_raw_table",
+        gcp_conn_id=CONN_ID,
+        project_id=PROJECT_ID,
+        dataset_id=DATASET_ID,
+        table_id=TABLE_RAW.split('.')[1],
+        schema_fields=TABLE_RAW_SCHEMA
+    )
 
     fill_raw_table = PythonOperator(
         task_id="fill_raw_table",
-        python_callable=fill_raw_table_bq,
+        python_callable=fill_table_bq,
         op_kwargs={
+            "df":get_data_from_git(GIT_URL, REGEX),
             "project_id":PROJECT_ID,
             "table_id":TABLE_RAW,
             "if_exists":"replace",
@@ -159,34 +213,31 @@ with DAG(
 
     TASKS.append(TASKS_AUX)
 
-    def get_best_selling_line(query:str, project_id:str, max_results:int):
-        """
-        Get Best Selling Line in 12/2019
-        """
-        credentials = get_credentials(CONN_ID)
+    create_final_table = BigQueryCreateEmptyTableOperator(
+        task_id="create_final_table",
+        gcp_conn_id=CONN_ID,
+        project_id=PROJECT_ID,
+        dataset_id=DATASET_ID,
+        table_id=TABLE_FINAL.split('.')[1],
+        schema_fields=TABLE_FINAL_SCHEMA
+    )
 
-        logging.info("Reading data from BQ")
-        df = pandas_gbq.read_gbq(query=query, 
-                          project_id=project_id, 
-                          credentials=credentials, 
-                          max_results=max_results,
-                          )
-        logging.info("Data fetched")
-
-        return df['linha'][0]
-    
-    # def get_data_from_twitter():
-    
-    """best_selling_line = PythonOperator(
+    best_selling_line = PythonOperator(
         task_id="best_selling_line",
-        python_callable=get_best_selling_line,
+        python_callable=fill_table_bq,
         op_kwargs={
-            "query":sql_best_selling_line,
+            "df":get_data_from_twitter(bearer_token, 
+                                       api_key, 
+                                       api_secret_key, 
+                                       access_token, 
+                                       access_token_secret),
             "project_id":PROJECT_ID,
-            "max_results":1,
+            "table_id":TABLE_FINAL,
+            "if_exists":"replace",
+            "table_schema":TABLE_FINAL_SCHEMA,
         },
         dag=dag,
-    )"""
+    )
 
     end = DummyOperator(task_id="end", dag=dag)
     
@@ -197,7 +248,7 @@ with DAG(
         create_raw_table,
         fill_raw_table,
         *TASKS,
+        create_final_table,
+        best_selling_line,
         end
     )
-
-   # start >> check_pip >> create_dataset >> create_raw_table >> fill_raw_table >> end
