@@ -11,7 +11,7 @@ from airflow.operators.dummy_operator import DummyOperator
 from airflow.operators.bash import BashOperator
 from airflow.contrib.hooks.gcp_api_base_hook import GoogleCloudBaseHook
 from airflow.providers.google.cloud.operators.bigquery import (BigQueryCreateEmptyTableOperator, 
-BigQueryCreateEmptyDatasetOperator, BigQueryInsertJobOperator)
+BigQueryCreateEmptyDatasetOperator, BigQueryInsertJobOperator, BigQueryGetDataOperator)
 from airflow.operators.python import PythonOperator
 from helper.sqls import *
 
@@ -102,7 +102,7 @@ with DAG(
     check_pip = BashOperator(
       task_id="pip_task",
       #bash_command='pip freeze',
-      bash_command='pip install openpyxl',
+      bash_command='pip install openpyxl tweepy',
       dag=dag,
   )
 
@@ -158,6 +158,35 @@ with DAG(
         TASKS_AUX.append(create_view_table)
 
     TASKS.append(TASKS_AUX)
+
+    def get_best_selling_line(query:str, project_id:str, max_results:int):
+        """
+        Get Best Selling Line in 12/2019
+        """
+        credentials = get_credentials(CONN_ID)
+
+        logging.info("Reading data from BQ")
+        df = pandas_gbq.read_gbq(query=query, 
+                          project_id=project_id, 
+                          credentials=credentials, 
+                          max_results=max_results,
+                          )
+        logging.info("Data fetched")
+
+        return df['linha'][0]
+    
+    # def get_data_from_twitter():
+    
+    """best_selling_line = PythonOperator(
+        task_id="best_selling_line",
+        python_callable=get_best_selling_line,
+        op_kwargs={
+            "query":sql_best_selling_line,
+            "project_id":PROJECT_ID,
+            "max_results":1,
+        },
+        dag=dag,
+    )"""
 
     end = DummyOperator(task_id="end", dag=dag)
     
