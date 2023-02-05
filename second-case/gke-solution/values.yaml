@@ -565,15 +565,15 @@ workers:
   extraInitContainers: []
 
   # Mount additional volumes into worker.
-  # extraVolumeMounts: 
-  #   - name: requirements
+  extraVolumeMounts: 
+    - name: requirements
     # Change it for your path
-  #     mountPath: /Users/iuriqc/Desktop/applications/gb_challenges/second-case/gke-solution/
+      mountPath: /Users/iuriqc/Desktop/applications/gb_challenges/second-case/gke-solution/
 
-  # extraVolumes: 
-  #   - name: requirements
-  #     configMap:
-  #       name: requirements
+  extraVolumes: 
+    - name: requirements
+      configMap:
+        name: requirements
 
   # Select certain nodes for airflow worker pods.
   nodeSelector: {}
@@ -625,14 +625,6 @@ workers:
     env: []
 
   env: []
-
-  extraPipPackages:
-    - "pandas"
-    - "pandas_gbq"
-    - "requests"
-    - "beautifulsoup4"
-    - "openpyxl"
-    - "tweepy"
 
 # Airflow scheduler settings
 scheduler:
