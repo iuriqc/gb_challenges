@@ -22,7 +22,6 @@ with DAG(
     schedule_interval=None,
     start_date=datetime(2023, 2, 4),
     catchup=False,
-    depends_on_past=False,
     tags=['teste'],
     description='Teste',
 ) as dag:
