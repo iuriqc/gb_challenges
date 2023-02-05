@@ -66,7 +66,7 @@ with DAG(
 
         return credentials
 
-    def create_raw_table_bq(project_id:str, table_id:str, if_exists:str):
+    def fill_raw_table_bq(project_id:str, table_id:str, if_exists:str):
         """
         Create raw table in BigQuery
         """
@@ -113,7 +113,7 @@ with DAG(
 
     fill_table = PythonOperator(
         task_id="fill_raw_table",
-        python_callable=create_raw_table_bq,
+        python_callable=fill_raw_table_bq,
         op_kwargs={
             "project_id":PROJECT_ID,
             "table_id":TABLE_RAW,
