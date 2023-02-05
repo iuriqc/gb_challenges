@@ -697,8 +697,15 @@ scheduler:
   extraInitContainers: []
 
   # Mount additional volumes into scheduler.
-  extraVolumes: []
-  extraVolumeMounts: []
+  extraVolumeMounts: 
+    - name: requirements
+    # Change it for your path
+      mountPath: /Users/iuriqc/Desktop/applications/gb_challenges/second-case/gke-solution/
+
+  extraVolumes: 
+    - name: requirements
+      configMap:
+        name: requirements
 
   # Select certain nodes for airflow scheduler pods.
   nodeSelector: {}
@@ -969,8 +976,15 @@ webserver:
   extraInitContainers: []
 
   # Mount additional volumes into webserver.
-  extraVolumes: []
-  extraVolumeMounts: []
+  extraVolumeMounts: 
+    - name: requirements
+    # Change it for your path
+      mountPath: /Users/iuriqc/Desktop/applications/gb_challenges/second-case/gke-solution/
+
+  extraVolumes: 
+    - name: requirements
+      configMap:
+        name: requirements
 
   # This string (can be templated) will be mounted into the Airflow Webserver as a custom
   # webserver_config.py. You can bake a webserver_config.py in to your image instead.
