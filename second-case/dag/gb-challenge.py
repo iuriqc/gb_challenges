@@ -17,8 +17,8 @@ GIT_URL = 'https://github.com/iuriqc/gb_challenges/tree/main/second-case/files'
 REGEX = r"Base_[0-9]{4}\.xlsx$"
 
 PROJECT_ID = 'gb-challenge'
-DATASET_ID = 'tables'
-TABLE_RAW = 'tables.raw'
+DATASET_ID = 'TABLES'
+TABLE_RAW = 'TABLES.RAW'
 TABLE_RAW_SCHEMA = [
                 {"name": "ID_MARCA", "type": "INTEGER", "mode": "REQUIRED"},
                 {"name": "MARCA", "type": "STRING", "mode": "REQUIRED"},
