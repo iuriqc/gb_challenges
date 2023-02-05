@@ -46,30 +46,38 @@ with DAG(
                 files.append(f"https://github.com{result}?raw=true")
             else:
                 pass
-        
+
         table = pd.DataFrame()
-        
+
         logging.info("Reading files...")
         for file in files:
             df = pd.read_excel(file)
             table = pd.concat([table,df], ignore_index=True)
         logging.info("Process finished")
-        
+
         return table
-    
-    def create_raw_table_bq(project_id:str, table_id:str):
+
+    def get_credentials(gcp_conn_id):
+        """
+        Get credentials from Airflow connection
+        """
+        gcp = GoogleCloudBaseHook(gcp_conn_id=gcp_conn_id)
+        credentials = gcp._get_credentials()
+
+        return credentials
+
+    def create_raw_table_bq(project_id:str, table_id:str, if_exists:str):
         """
         Create raw table in BigQuery
         """
         df = get_data_from_git(GIT_URL, REGEX)
 
-        gcp = GoogleCloudBaseHook(gcp_conn_id=CONN_ID)
-        credentials = gcp._get_credentials()
+        credentials = get_credentials(CONN_ID)
 
         logging.info("Saving table in BQ")
-        pandas_gbq.to_gbq(df, table_id, project_id, if_exists='replace', credentials=credentials)
+        pandas_gbq.to_gbq(df, table_id, project_id, if_exists, credentials=credentials)
         logging.info("Table created")
-    
+
     start = DummyOperator(task_id="start", dag=dag)
 
     check_pip = BashOperator(
@@ -102,13 +110,14 @@ with DAG(
                 {"name": "QTD_VENDA", "type": "INTEGER", "mode": "REQUIRED"},
             ]
         )
-    
+
     fill_table = PythonOperator(
         task_id="fill_raw_table",
         python_callable=create_raw_table_bq,
         op_kwargs={
             "project_id":PROJECT_ID,
             "table_id":TABLE_RAW,
+            "if_exists":"replace",
         },
         dag=dag,
     )
