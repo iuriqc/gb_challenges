@@ -5,6 +5,7 @@ import pandas as pd
 import pandas_gbq
 import requests
 from bs4 import BeautifulSoup
+from google.oauth2 import service_account
 from airflow.models import DAG
 from airflow.operators.dummy_operator import DummyOperator
 from airflow.operators.bash import BashOperator
