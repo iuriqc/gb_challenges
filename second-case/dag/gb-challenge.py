@@ -32,6 +32,7 @@ TABLE_RAW_SCHEMA = [
 CONN_ID = "airflow-to-bq"
 
 TASKS = []
+TASKS_AUX = []
 
 with DAG(
     dag_id="teste",
@@ -134,8 +135,6 @@ with DAG(
         dag=dag,
     )
 
-    end = DummyOperator(task_id="end", dag=dag)
-
     tables_list = [f'TABELA_{i}' for i in range(1,5)]
     for table in tables_list:
         create_view_table = BigQueryInsertJobOperator(
@@ -155,9 +154,12 @@ with DAG(
             }
         )
 
-        fill_raw_table >> create_view_table >> end
-        TASKS.append(create_view_table)
+        TASKS_AUX.append(create_view_table)
 
+    TASKS.append(TASKS_AUX)
+
+    end = DummyOperator(task_id="end", dag=dag)
+    
     chain(
         start,
         check_pip,
