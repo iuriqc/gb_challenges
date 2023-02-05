@@ -6,12 +6,14 @@ import pandas_gbq
 import requests
 from bs4 import BeautifulSoup
 from airflow.models import DAG
+from airflow.models.baseoperator import chain
 from airflow.operators.dummy_operator import DummyOperator
 from airflow.operators.bash import BashOperator
 from airflow.contrib.hooks.gcp_api_base_hook import GoogleCloudBaseHook
 from airflow.providers.google.cloud.operators.bigquery import (BigQueryCreateEmptyTableOperator, 
-BigQueryCreateEmptyDatasetOperator)
+BigQueryCreateEmptyDatasetOperator, BigQueryInsertJobOperator)
 from airflow.operators.python import PythonOperator
+from helper.sqls import *
 
 GIT_URL = 'https://github.com/iuriqc/gb_challenges/tree/main/second-case/files'
 REGEX = r"Base_[0-9]{4}\.xlsx$"
@@ -28,6 +30,8 @@ TABLE_RAW_SCHEMA = [
                 {"name": "QTD_VENDA", "type": "INTEGER", "mode": "REQUIRED"},
             ]
 CONN_ID = "airflow-to-bq"
+
+TASKS = []
 
 with DAG(
     dag_id="teste",
@@ -109,7 +113,7 @@ with DAG(
         exists_ok=True
     )
 
-    create_table = BigQueryCreateEmptyTableOperator(
+    create_raw_table = BigQueryCreateEmptyTableOperator(
             task_id="create_raw_table",
             gcp_conn_id=CONN_ID,
             project_id=PROJECT_ID,
@@ -118,7 +122,7 @@ with DAG(
             schema_fields=TABLE_RAW_SCHEMA
         )
 
-    fill_table = PythonOperator(
+    fill_raw_table = PythonOperator(
         task_id="fill_raw_table",
         python_callable=fill_raw_table_bq,
         op_kwargs={
@@ -130,6 +134,38 @@ with DAG(
         dag=dag,
     )
 
+    tables_list = [f'TABELA_{i}' for i in range(1,5)]
+    for table in tables_list:
+        create_view_table = BigQueryInsertJobOperator(
+            task_id=f'create_{table}',
+            configuration={
+                "query": {
+                    "query": f'sql_{table}',
+                    "useLegacySql": False,
+                    "create_disposition": "CREATE_IF_NEEDED",
+                    "writeDisposition": "WRITE_TRUNCATE",
+                    'destinationTable': {
+                        'projectId': PROJECT_ID,
+                        'datasetId': DATASET_ID,
+                        'tableId': table,
+                    },
+                }
+            }
+        )
+
+        create_view_table
+        TASKS.append(create_view_table)
+
     end = DummyOperator(task_id="end", dag=dag)
 
-    start >> check_pip >> create_dataset >> create_table >> fill_table >> end
+    chain(
+        start,
+        check_pip,
+        create_dataset,
+        create_raw_table,
+        fill_raw_table,
+        *TASKS,
+        end
+    )
+
+   # start >> check_pip >> create_dataset >> create_raw_table >> fill_raw_table >> end
