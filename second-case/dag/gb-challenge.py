@@ -5,7 +5,7 @@ import pandas as pd
 import pandas_gbq
 import requests
 from bs4 import BeautifulSoup
-# import tweepy as tw
+import tweepy as tw
 from airflow.models import DAG
 from airflow.models.baseoperator import chain
 from airflow.operators.dummy_operator import DummyOperator
