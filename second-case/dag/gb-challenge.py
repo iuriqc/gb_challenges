@@ -7,7 +7,8 @@ import requests
 from bs4 import BeautifulSoup
 from airflow.models import DAG
 from airflow.operators.dummy_operator import DummyOperator
-from airflow.providers.google.cloud.operators.bigquery import BigQueryCreateEmptyTableOperator
+from airflow.providers.google.cloud.operators.bigquery import (BigQueryCreateEmptyTableOperator, 
+BigQueryCreateEmptyDatasetOperator)
 from airflow.operators.python import PythonOperator
 
 GIT_URL = 'https://github.com/iuriqc/gb_challenges/tree/main/second-case/files'
@@ -65,6 +66,13 @@ with DAG(
     
     start = DummyOperator(task_id="start",dag=dag)
 
+    create_dataset = BigQueryCreateEmptyDatasetOperator(
+        task_id="create_dataset",
+        project_id=PROJECT_ID,
+        dataset_id=DATASET_ID,
+        exists_ok=True
+    )
+
     create_table = BigQueryCreateEmptyTableOperator(
             task_id="create_raw_table",
             gcp_conn_id="airflow-to-bq",
@@ -91,4 +99,4 @@ with DAG(
         dag=dag,
     )
 
-    start >> create_table >> fill_table
+    start >> create_dataset >> create_table >> fill_table
