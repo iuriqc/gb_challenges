@@ -5,10 +5,10 @@ import pandas as pd
 import pandas_gbq
 import requests
 from bs4 import BeautifulSoup
-import google.auth
 from airflow.models import DAG
 from airflow.operators.dummy_operator import DummyOperator
 from airflow.operators.bash import BashOperator
+from airflow.providers.google.cloud.hooks.bigquery import (BigQueryHook, BigQueryPandasConnector)
 from airflow.providers.google.cloud.operators.bigquery import (BigQueryCreateEmptyTableOperator, 
 BigQueryCreateEmptyDatasetOperator)
 from airflow.operators.python import PythonOperator
@@ -19,6 +19,7 @@ REGEX = r"Base_[0-9]{4}\.xlsx$"
 PROJECT_ID = 'gb-challenge'
 DATASET_ID = 'tables'
 TABLE_RAW = 'tables.raw'
+CONN_ID = "airflow-to-bq"
 
 with DAG(
     dag_id="teste",
@@ -62,15 +63,11 @@ with DAG(
         """
         df = get_data_from_git(GIT_URL, REGEX)
 
-        credentials, project = google.auth.default(
-            scopes=[
-                'https://www.googleapis.com/auth/cloud-platform',
-                'https://www.googleapis.com/auth/bigquery'
-                ]
-        )
+        bq = BigQueryHook(bigquery_conn_id=CONN_ID)
+        pd = BigQueryPandasConnector(bq._get_field('project'), bq.get_service())
 
         logging.info("Saving table in BQ")
-        pandas_gbq.to_gbq(df, table_id, project_id, if_exists='replace', credentials=credentials)
+        pd.to_gbq(df, table_id, project_id, if_exists='replace')
         logging.info("Table created")
     
     start = DummyOperator(task_id="start", dag=dag)
@@ -84,7 +81,7 @@ with DAG(
 
     create_dataset = BigQueryCreateEmptyDatasetOperator(
         task_id="create_dataset",
-        gcp_conn_id="airflow-to-bq",
+        gcp_conn_id=CONN_ID,
         project_id=PROJECT_ID,
         dataset_id=DATASET_ID,
         exists_ok=True
@@ -92,7 +89,7 @@ with DAG(
 
     create_table = BigQueryCreateEmptyTableOperator(
             task_id="create_raw_table",
-            gcp_conn_id="airflow-to-bq",
+            gcp_conn_id=CONN_ID,
             project_id=PROJECT_ID,
             dataset_id=DATASET_ID,
             table_id=TABLE_RAW.split('.')[1],
