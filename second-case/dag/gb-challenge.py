@@ -8,7 +8,7 @@ from bs4 import BeautifulSoup
 from airflow.models import DAG
 from airflow.operators.dummy_operator import DummyOperator
 from airflow.operators.bash import BashOperator
-from airflow.providers.google.cloud.hooks.bigquery import (BigQueryHook, BigQueryPandasConnector)
+from airflow.providers.google.cloud.hooks.bigquery import BigQueryHook
 from airflow.providers.google.cloud.operators.bigquery import (BigQueryCreateEmptyTableOperator, 
 BigQueryCreateEmptyDatasetOperator)
 from airflow.operators.python import PythonOperator
@@ -64,10 +64,10 @@ with DAG(
         df = get_data_from_git(GIT_URL, REGEX)
 
         bq = BigQueryHook(bigquery_conn_id=CONN_ID)
-        pd = BigQueryPandasConnector(bq._get_field('project'), bq.get_service())
+        credentials = bq.get_conn()
 
         logging.info("Saving table in BQ")
-        pd.to_gbq(df, table_id, project_id, if_exists='replace')
+        pandas_gbq.to_gbq(df, table_id, project_id, if_exists='replace', credentials=credentials)
         logging.info("Table created")
     
     start = DummyOperator(task_id="start", dag=dag)
