@@ -68,6 +68,7 @@ with DAG(
 
     create_dataset = BigQueryCreateEmptyDatasetOperator(
         task_id="create_dataset",
+        gcp_conn_id="airflow-to-bq",
         project_id=PROJECT_ID,
         dataset_id=DATASET_ID,
         exists_ok=True
