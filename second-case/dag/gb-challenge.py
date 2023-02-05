@@ -43,7 +43,7 @@ TASKS_AUX = []
 with DAG(
     dag_id="teste",
     schedule_interval=None,
-    start_date=datetime(2023, 2, 4),
+    start_date=datetime(2023, 2, 5),
     catchup=False,
     tags=['teste'],
     description='Teste',
