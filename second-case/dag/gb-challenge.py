@@ -1,8 +1,6 @@
 from datetime import datetime
 import logging
-import os
 import re
-from os import path
 import pandas as pd
 import pandas_gbq
 import requests
@@ -11,7 +9,6 @@ from airflow.models import DAG
 from airflow.operators.dummy_operator import DummyOperator
 from airflow.providers.google.cloud.operators.bigquery import BigQueryCreateEmptyTableOperator
 from airflow.operators.python import PythonOperator
-from airflow.providers.google.cloud.hooks.gcs import GCSHook
 
 GIT_URL = 'https://github.com/iuriqc/gb_challenges/tree/main/second-case/files'
 REGEX = r"Base_[0-9]{4}\.xlsx$"
@@ -34,6 +31,7 @@ with DAG(
         """
         Function to read files from GitHub repo and return a dataframe
         """
+        logging.info("Getting data from GitHub")
         reqs = requests.get(url)
         soup = BeautifulSoup(reqs.text, 'html.parser')
 
@@ -47,10 +45,12 @@ with DAG(
                 pass
         
         table = pd.DataFrame()
-
+        
+        logging.info("Reading files...")
         for file in files:
             df = pd.read_excel(file)
             table = pd.concat([table,df], ignore_index=True)
+        logging.info("Process finished")
         
         return table
     
@@ -60,7 +60,9 @@ with DAG(
         """
         df = get_data_from_git(GIT_URL, REGEX)
 
+        logging.info("Saving table in BQ")
         pandas_gbq.to_gbq(df, table_id=table_id, project_id=project_id)
+        logging.info("Table created")
     
     start = DummyOperator(task_id="start",dag=dag)
 
