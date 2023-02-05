@@ -139,6 +139,7 @@ with DAG(
     for table in tables_list:
         create_view_table = BigQueryInsertJobOperator(
             task_id=f'create_{table}',
+            gcp_conn_id=CONN_ID,
             configuration={
                 "query": {
                     "query": f'sql_{table}',
