@@ -142,7 +142,7 @@ with DAG(
             gcp_conn_id=CONN_ID,
             configuration={
                 "query": {
-                    "query": f'sql_{table}',
+                    "query": locals()[f'sql_{table}'],
                     "useLegacySql": False,
                     "create_disposition": "CREATE_IF_NEEDED",
                     "writeDisposition": "WRITE_TRUNCATE",
