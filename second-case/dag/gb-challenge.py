@@ -5,14 +5,14 @@ import pandas as pd
 import pandas_gbq
 import requests
 from bs4 import BeautifulSoup
+import tweepy as tw
 from airflow.models import DAG
 from airflow.models.baseoperator import chain
 from airflow.operators.dummy_operator import DummyOperator
-#from airflow.operators.bash import BashOperator
 from airflow.contrib.hooks.gcp_api_base_hook import GoogleCloudBaseHook
 from airflow.providers.google.cloud.operators.bigquery import (BigQueryCreateEmptyTableOperator, 
 BigQueryCreateEmptyDatasetOperator, BigQueryInsertJobOperator)
-from airflow.operators.python import PythonVirtualenvOperator
+from airflow.operators.python import PythonOperator
 from helper.sqls import *
 from helper.keys import *
 
@@ -20,9 +20,12 @@ GIT_URL = 'https://github.com/iuriqc/gb_challenges/tree/main/second-case/files'
 REGEX = r"Base_[0-9]{4}\.csv$"
 
 PROJECT_ID = 'gb-challenge'
-DATASET_ID = 'TABLES'
-TABLE_RAW = 'TABLES.RAW'
-TABLE_FINAL = 'TABLES.FINAL'
+DATASET_RAW = 'RAW'
+DATASET_STANDARD = 'STANDARDIZED'
+DATASET_CURATED = 'CURATED'
+DATASETS = [DATASET_RAW,DATASET_STANDARD,DATASET_CURATED]
+TABLE_RAW = 'RAW.BASE'
+TABLE_FINAL = 'CURATED.FINAL'
 TABLE_RAW_SCHEMA = [
                 {"name": "ID_MARCA", "type": "INTEGER", "mode": "REQUIRED"},
                 {"name": "MARCA", "type": "STRING", "mode": "REQUIRED"},
@@ -36,9 +39,6 @@ TABLE_FINAL_SCHEMA = [
                 {"name": "TEXTO", "type": "STRING", "mode": "REQUIRED"},
             ]
 CONN_ID = "airflow-to-bq"
-
-TASKS = []
-TASKS_AUX = []
 
 with DAG(
     dag_id="teste",
@@ -124,8 +124,6 @@ with DAG(
                               access_token_secret:str,
                               ):
         """Get data from Twitter"""
-        import tweepy as tw
-
         client = tw.Client(bearer_token=bearer_token,
                    consumer_key=consumer_key, 
                    consumer_secret=consumer_secret, 
@@ -152,34 +150,33 @@ with DAG(
         return result
 
     start = DummyOperator(task_id="start", dag=dag)
+    
+    TASKS_DATASETS = []
+    TASKS_DATASETS_AUX = []
+    for dataset in DATASETS:
+        create_dataset = BigQueryCreateEmptyDatasetOperator(
+            task_id=f'create_{dataset}',
+            gcp_conn_id=CONN_ID,
+            project_id=PROJECT_ID,
+            dataset_id=dataset,
+            exists_ok=True
+        )
 
-    """check_pip = BashOperator(
-      task_id="pip_task",
-      #bash_command='pip freeze',
-      bash_command='pip install openpyxl tweepy',
-      dag=dag,
-    )"""
+        TASKS_DATASETS_AUX.append(create_dataset)
 
-    create_dataset = BigQueryCreateEmptyDatasetOperator(
-        task_id="create_dataset",
-        gcp_conn_id=CONN_ID,
-        project_id=PROJECT_ID,
-        dataset_id=DATASET_ID,
-        exists_ok=True
-    )
+    TASKS_DATASETS.append(TASKS_DATASETS_AUX)
 
     create_raw_table = BigQueryCreateEmptyTableOperator(
         task_id="create_raw_table",
         gcp_conn_id=CONN_ID,
         project_id=PROJECT_ID,
-        dataset_id=DATASET_ID,
+        dataset_id=DATASET_RAW,
         table_id=TABLE_RAW.split('.')[1],
         schema_fields=TABLE_RAW_SCHEMA
     )
 
-    fill_raw_table = PythonVirtualenvOperator(
+    fill_raw_table = PythonOperator(
         task_id="fill_raw_table",
-        requirements="openpyxl",
         python_callable=fill_table_bq,
         op_kwargs={
             "df":get_data_from_git(GIT_URL, REGEX),
@@ -191,6 +188,8 @@ with DAG(
         dag=dag,
     )
 
+    TASKS_TABLES = []
+    TASKS_TABLES_AUX = []
     tables_list = [f'TABELA_{i}' for i in range(1,5)]
     for table in tables_list:
         create_view_table = BigQueryInsertJobOperator(
@@ -204,29 +203,28 @@ with DAG(
                     "writeDisposition": "WRITE_TRUNCATE",
                     'destinationTable': {
                         'projectId': PROJECT_ID,
-                        'datasetId': DATASET_ID,
+                        'datasetId': DATASET_STANDARD,
                         'tableId': table,
                     },
                 }
             }
         )
 
-        TASKS_AUX.append(create_view_table)
+        TASKS_TABLES_AUX.append(create_view_table)
 
-    TASKS.append(TASKS_AUX)
+    TASKS_TABLES.append(TASKS_TABLES_AUX)
 
     create_final_table = BigQueryCreateEmptyTableOperator(
         task_id="create_final_table",
         gcp_conn_id=CONN_ID,
         project_id=PROJECT_ID,
-        dataset_id=DATASET_ID,
+        dataset_id=DATASET_CURATED,
         table_id=TABLE_FINAL.split('.')[1],
         schema_fields=TABLE_FINAL_SCHEMA
     )
 
-    best_selling_line = PythonVirtualenvOperator(
+    best_selling_line = PythonOperator(
         task_id="best_selling_line",
-        requirements="tweepy",
         python_callable=fill_table_bq,
         op_kwargs={
             "df":get_data_from_twitter(bearer_token, 
@@ -246,11 +244,10 @@ with DAG(
     
     chain(
         start,
-        #check_pip,
-        create_dataset,
+        *TASKS_DATASETS,
         create_raw_table,
         fill_raw_table,
-        *TASKS,
+        *TASKS_TABLES,
         create_final_table,
         best_selling_line,
         end

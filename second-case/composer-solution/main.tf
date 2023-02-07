@@ -35,28 +35,11 @@ resource "google_composer_environment" "gb-env" {
       python_version = "3"
       pypi_packages = {
         pandas = ""
+        pandas_gbq = ""
+        requests = ""
+        beautifulsoup4 = ""
+        tweepy = ""
       }
     }
   }
-}
-
-resource "google_storage_bucket" "landing-bucket" {
-name = "repo-landing"
-location = var.region
-storage_class = "REGIONAL"
-}
-
-resource "google_bigquery_dataset" "raw-dataset" {
-dataset_id = "raw"
-location = var.region
-}
-
-resource "google_bigquery_dataset" "standardized-dataset" {
-dataset_id = "standardized"
-location = var.region
-}
-
-resource "google_bigquery_dataset" "curated-dataset" {
-dataset_id = "curated"
-location = var.region
 }
