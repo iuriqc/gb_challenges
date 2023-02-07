@@ -93,8 +93,8 @@ with DAG(
         credentials = get_credentials(CONN_ID)
 
         logging.info(f"Saving table {table_id} in BQ")
-        pandas_gbq.to_gbq(df=df, 
-                          table_id=table_id, 
+        pandas_gbq.to_gbq(df, 
+                          table_id, 
                           project_id=project_id, 
                           if_exists=if_exists, 
                           credentials=credentials, 
@@ -116,7 +116,7 @@ with DAG(
                           )
         logging.info("Data fetched")
 
-        return df['LINHA'][0]
+        return str(df['LINHA'].iloc[0])
     
     def get_data_from_twitter(bearer_token:str,
                               consumer_key:str,
