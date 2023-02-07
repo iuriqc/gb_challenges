@@ -32,7 +32,6 @@
         ```
         helm upgrade --install airflow apache-airflow/airflow -n airflow -f values.yaml
         ```
-   - Configure yaml helm to setup a local folder and requirements to be installed in to Airflow (use the same yaml)
 
 7. Create a service account to Airflow with BigQuery Job User role (just BQ will be used here) and a JSON key and use it in Airflow Connection (just copy the content)
 
