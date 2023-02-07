@@ -8,7 +8,7 @@ from bs4 import BeautifulSoup
 from airflow.models import DAG
 from airflow.models.baseoperator import chain
 from airflow.operators.dummy_operator import DummyOperator
-from airflow.operators.bash import BashOperator
+#from airflow.operators.bash import BashOperator
 from airflow.contrib.hooks.gcp_api_base_hook import GoogleCloudBaseHook
 from airflow.providers.google.cloud.operators.bigquery import (BigQueryCreateEmptyTableOperator, 
 BigQueryCreateEmptyDatasetOperator, BigQueryInsertJobOperator)
@@ -153,12 +153,12 @@ with DAG(
 
     start = DummyOperator(task_id="start", dag=dag)
 
-    check_pip = BashOperator(
+    """check_pip = BashOperator(
       task_id="pip_task",
       #bash_command='pip freeze',
       bash_command='pip install openpyxl tweepy',
       dag=dag,
-    )
+    )"""
 
     create_dataset = BigQueryCreateEmptyDatasetOperator(
         task_id="create_dataset",
@@ -246,7 +246,7 @@ with DAG(
     
     chain(
         start,
-        check_pip,
+        #check_pip,
         create_dataset,
         create_raw_table,
         fill_raw_table,
