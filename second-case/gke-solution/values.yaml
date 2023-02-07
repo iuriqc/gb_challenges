@@ -1822,20 +1822,20 @@ dags:
     ## optional subpath for dag volume mount
     subPath: ~
   gitSync:
-    enabled: false
+    enabled: true
 
     # git repo clone url
     # ssh example: git@github.com:apache/airflow.git
     # https example: https://github.com/apache/airflow.git
-    repo: https://github.com/apache/airflow.git
-    branch: v2-2-stable
+    repo: ssh://git@github.com/iuriqc/gb_challenges.git
+    branch: main
     rev: HEAD
     depth: 1
     # the number of consecutive failures allowed before aborting
     maxFailures: 0
     # subpath within the repo where dags are located
     # should be "" if dags are at repo root
-    subPath: "tests/dags"
+    subPath: "second-case/dag"
     # if your repo needs a user name password
     # you can load them to a k8s secret like the one below
     #   ---
@@ -1848,7 +1848,7 @@ dags:
     #     GIT_SYNC_PASSWORD: <base64_encoded_git_password>
     # and specify the name of the secret below
     #
-    # credentialsSecret: git-credentials
+    credentialsSecret: git-credentials
     #
     #
     # If you are using an ssh clone url, you can load
@@ -1862,7 +1862,7 @@ dags:
     #     # key needs to be gitSshKey
     #     gitSshKey: <base64_encoded_data>
     # and specify the name of the secret below
-    # sshKeySecret: airflow-ssh-secret
+    sshKeySecret: airflow-git-ssh-secret
     #
     # If you are using an ssh private key, you can additionally
     # specify the content of your known_hosts file, example:
