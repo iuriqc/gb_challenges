@@ -36,7 +36,7 @@
 
 7. Create a service account to Airflow with BigQuery Job User role (just BQ will be used here) and a JSON key and use it in Airflow Connection (just copy the content)
 
-8. 
+8. It's necessary to create a custom image to use in Kubernetes, due to a certain requirements. To do it, first active Container/Artifact Registry in GCP (you will need to create IAM permission to Artifact Registry and GCS) and configure Docker to authenticate to GCP trough gcloud auth. Then create the image with requirements and push it to GCR. More infos [here](https://cloud.google.com/container-registry/docs/pushing-and-pulling?hl=pt-br).
 
 9. To delete the Airflow from Kubernetes, do it:
    - Uninstall 
