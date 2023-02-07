@@ -9,7 +9,7 @@ import tweepy as tw
 from airflow.models import DAG
 from airflow.models.baseoperator import chain
 from airflow.operators.dummy_operator import DummyOperator
-from airflow.contrib.hooks.gcp_api_base_hook import GoogleCloudBaseHook
+from airflow.contrib.hooks.gcp_api_base_hook import GoogleBaseHook
 from airflow.providers.google.cloud.operators.bigquery import (BigQueryCreateEmptyTableOperator, 
 BigQueryCreateEmptyDatasetOperator, BigQueryInsertJobOperator)
 from airflow.operators.python import PythonOperator
@@ -38,7 +38,8 @@ TABLE_FINAL_SCHEMA = [
                 {"name": "NOME", "type": "STRING", "mode": "REQUIRED"},
                 {"name": "TEXTO", "type": "STRING", "mode": "REQUIRED"},
             ]
-CONN_ID = "airflow-to-bq"
+CONN_ID = 'my-connection'
+LOCATION = 'southamerica-east1'
 
 with DAG(
     dag_id="teste",
@@ -80,8 +81,8 @@ with DAG(
         """
         Get credentials from Airflow connection
         """
-        gcp = GoogleCloudBaseHook(gcp_conn_id=gcp_conn_id)
-        credentials = gcp._get_credentials()
+        gcp = GoogleBaseHook(gcp_conn_id=gcp_conn_id)
+        credentials = gcp.get_credentials()
 
         return credentials
 
@@ -108,7 +109,7 @@ with DAG(
         credentials = get_credentials(CONN_ID)
 
         logging.info("Reading data from BQ")
-        df = pandas_gbq.read_gbq(query=query, 
+        df = pandas_gbq.read_gbq(query_or_table=query, 
                           project_id=project_id, 
                           credentials=credentials, 
                           max_results=max_results,
@@ -158,6 +159,7 @@ with DAG(
             task_id=f'create_{dataset}',
             gcp_conn_id=CONN_ID,
             project_id=PROJECT_ID,
+            location=LOCATION,
             dataset_id=dataset,
             exists_ok=True
         )
@@ -170,6 +172,7 @@ with DAG(
         task_id="create_raw_table",
         gcp_conn_id=CONN_ID,
         project_id=PROJECT_ID,
+        location=LOCATION,
         dataset_id=DATASET_RAW,
         table_id=TABLE_RAW.split('.')[1],
         schema_fields=TABLE_RAW_SCHEMA
@@ -195,6 +198,7 @@ with DAG(
         create_view_table = BigQueryInsertJobOperator(
             task_id=f'create_{table}',
             gcp_conn_id=CONN_ID,
+            location=LOCATION,
             configuration={
                 "query": {
                     "query": locals()[f'sql_{table}'],
@@ -218,6 +222,7 @@ with DAG(
         task_id="create_final_table",
         gcp_conn_id=CONN_ID,
         project_id=PROJECT_ID,
+        location=LOCATION,
         dataset_id=DATASET_CURATED,
         table_id=TABLE_FINAL.split('.')[1],
         schema_fields=TABLE_FINAL_SCHEMA
