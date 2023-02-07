@@ -20,9 +20,9 @@
 6. This steps will create a Composer Environment, a serverless Airflow at GCP.
 
 7. After, just upload the DAG folder (contain the DAG script and your dependencies) and run it.
-    :heavy_exclamation_mark: GCP will automatic create a bucket in GCS for Airflow and you need to put the script files there.
+   > :heavy_exclamation_mark: GCP will automatic create a bucket in GCS for Airflow and you need to put the script files there.
 
-1. To destroy just:
+8. To destroy just:
 
     ```
     terraform destroy
