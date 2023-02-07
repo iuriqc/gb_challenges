@@ -23,7 +23,6 @@ PROJECT_ID = 'gb-challenge'
 DATASET_RAW = 'RAW'
 DATASET_STANDARD = 'STANDARDIZED'
 DATASET_CURATED = 'CURATED'
-DATASETS = [DATASET_RAW,DATASET_STANDARD,DATASET_CURATED]
 TABLE_RAW = 'RAW.BASE'
 TABLE_FINAL = 'CURATED.FINAL'
 TABLE_RAW_SCHEMA = [
@@ -152,6 +151,7 @@ with DAG(
 
     start = DummyOperator(task_id="start", dag=dag)
     
+    DATASETS = [DATASET_RAW,DATASET_STANDARD,DATASET_CURATED]
     TASKS_DATASETS = []
     TASKS_DATASETS_AUX = []
     for dataset in DATASETS:
@@ -168,8 +168,8 @@ with DAG(
 
     TASKS_DATASETS.append(TASKS_DATASETS_AUX)
 
-    create_raw_table = BigQueryCreateEmptyTableOperator(
-        task_id="create_raw_table",
+    create_base_table = BigQueryCreateEmptyTableOperator(
+        task_id="create_base_table",
         gcp_conn_id=CONN_ID,
         project_id=PROJECT_ID,
         location=LOCATION,
@@ -178,8 +178,8 @@ with DAG(
         schema_fields=TABLE_RAW_SCHEMA
     )
 
-    fill_raw_table = PythonOperator(
-        task_id="fill_raw_table",
+    fill_base_table = PythonOperator(
+        task_id="fill_base_table",
         python_callable=fill_table_bq,
         op_kwargs={
             "df":get_data_from_git(GIT_URL, REGEX),
@@ -195,7 +195,7 @@ with DAG(
     TASKS_TABLES_AUX = []
     tables_list = [f'TABELA_{i}' for i in range(1,5)]
     for table in tables_list:
-        create_view_table = BigQueryInsertJobOperator(
+        create_standard_table = BigQueryInsertJobOperator(
             task_id=f'create_{table}',
             gcp_conn_id=CONN_ID,
             location=LOCATION,
@@ -214,7 +214,7 @@ with DAG(
             }
         )
 
-        TASKS_TABLES_AUX.append(create_view_table)
+        TASKS_TABLES_AUX.append(create_standard_table)
 
     TASKS_TABLES.append(TASKS_TABLES_AUX)
 
@@ -228,8 +228,8 @@ with DAG(
         schema_fields=TABLE_FINAL_SCHEMA
     )
 
-    best_selling_line = PythonOperator(
-        task_id="best_selling_line",
+    fill_final_table = PythonOperator(
+        task_id="fill_final_table",
         python_callable=fill_table_bq,
         op_kwargs={
             "df":get_data_from_twitter(bearer_token, 
@@ -250,10 +250,10 @@ with DAG(
     chain(
         start,
         *TASKS_DATASETS,
-        create_raw_table,
-        fill_raw_table,
+        create_base_table,
+        fill_base_table,
         *TASKS_TABLES,
         create_final_table,
-        best_selling_line,
+        fill_final_table,
         end
     )
