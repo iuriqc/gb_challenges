@@ -1,6 +1,2 @@
-pandas
-pandas_gbq
-requests
-beautifulsoup4
 openpyxl
 tweepy
