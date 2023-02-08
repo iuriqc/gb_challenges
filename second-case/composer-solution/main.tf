@@ -45,18 +45,3 @@ resource "google_composer_environment" "gb-env" {
     }
   }
 }
-
-resource "google_bigquery_dataset" "raw-dataset" {
-dataset_id = "RAW"
-location = var.region
-}
-
-resource "google_bigquery_dataset" "standardized-dataset" {
-dataset_id = "STANDARDIZED"
-location = var.region
-}
-
-resource "google_bigquery_dataset" "curated-dataset" {
-dataset_id = "CURATED"
-location = var.region
-}

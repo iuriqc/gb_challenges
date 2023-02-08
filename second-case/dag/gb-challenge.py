@@ -10,6 +10,7 @@ from airflow.models import DAG
 from airflow.models.baseoperator import chain
 from airflow.operators.dummy_operator import DummyOperator
 from airflow.contrib.hooks.gcp_api_base_hook import GoogleBaseHook
+from airflow.providers.google.cloud.hooks.bigquery import BigQueryHook
 from airflow.providers.google.cloud.operators.bigquery import (BigQueryCreateEmptyTableOperator, 
 BigQueryCreateEmptyDatasetOperator, BigQueryInsertJobOperator)
 from airflow.operators.python import PythonOperator
@@ -84,6 +85,18 @@ with DAG(
         credentials = gcp.get_credentials()
 
         return credentials
+    
+    def table_exists(gcp_conn_id:str, dataset_id:str, table_id:str, project_id:str):
+        """
+        Check if table exists
+        """
+        hook = BigQueryHook(gcp_conn_id=gcp_conn_id)
+        exists = hook.table_exists(dataset_id=dataset_id,
+                                   table_id=table_id,
+                                   project_id=project_id
+                                  )
+        
+        return exists
 
     def fill_table_bq(df, project_id:str, table_id:str, if_exists:str, table_schema:list):
         """
@@ -106,16 +119,19 @@ with DAG(
         Get Best Selling Line in 12/2019
         """
         credentials = get_credentials(CONN_ID)
-
-        logging.info("Reading data from BQ")
-        df = pandas_gbq.read_gbq(query_or_table=query, 
-                          project_id=project_id, 
-                          credentials=credentials, 
-                          max_results=max_results,
-                          )
-        logging.info("Data fetched")
-
-        return str(df['LINHA'].iloc[0])
+        exists = table_exists(CONN_ID, DATASET_STANDARD, 'TABELA_4', PROJECT_ID)
+        
+        if exists:
+            logging.info("Reading data from BQ")
+            df = pandas_gbq.read_gbq(query_or_table=query, 
+                            project_id=project_id, 
+                            credentials=credentials, 
+                            max_results=max_results,
+                            )
+            logging.info("Data fetched")
+            return str(df['LINHA'].iloc[0])
+        else:
+            logging.info("Table doesn't exists")
     
     def get_data_from_twitter(bearer_token:str,
                               consumer_key:str,
@@ -132,22 +148,28 @@ with DAG(
                    return_type=dict,
                   )
         
-        best_selling_line = get_best_selling_line(sql_best_selling_line,PROJECT_ID,1)
+        exists = table_exists(CONN_ID, DATASET_STANDARD, 'TABELA_4', PROJECT_ID)
         
-        tweets = client.search_recent_tweets(query=f'boticario {best_selling_line} lang:pt',
-                                       max_results=50,
-                                       tweet_fields = 'author_id',
-                                       expansions='author_id',
-                                      )
-        
-        users = pd.DataFrame.from_dict(tweets['includes']['users'])
-        data = pd.DataFrame.from_dict(tweets['data']).drop(['id','edit_history_tweet_ids'], axis=1)
-        data.rename(columns={'author_id': 'id'}, inplace=True)
+        if exists:
+            logging.info("Getting data from Twitter")
+            best_selling_line = get_best_selling_line(sql_best_selling_line,PROJECT_ID,1)
+            
+            tweets = client.search_recent_tweets(query=f'boticario {best_selling_line} lang:pt',
+                                        max_results=50,
+                                        tweet_fields = 'author_id',
+                                        expansions='author_id',
+                                        )
+            
+            users = pd.DataFrame.from_dict(tweets['includes']['users'])
+            data = pd.DataFrame.from_dict(tweets['data']).drop(['id','edit_history_tweet_ids'], axis=1)
+            data.rename(columns={'author_id': 'id'}, inplace=True)
 
-        result = users.merge(data,on='id',how='inner').drop(['id','name'], axis=1)
-        result.rename(columns={'username': 'NOME','text': 'TEXTO'}, inplace=True)
+            result = users.merge(data,on='id',how='inner').drop(['id','name'], axis=1)
+            result.rename(columns={'username': 'NOME','text': 'TEXTO'}, inplace=True)
 
-        return result
+            return result
+        else:
+            logging.info("Table doesn't exists")
 
     start = DummyOperator(task_id="start", dag=dag)
     
