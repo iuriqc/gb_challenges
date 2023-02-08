@@ -42,12 +42,12 @@ CONN_ID = 'my-connection'
 LOCATION = 'southamerica-east1'
 
 with DAG(
-    dag_id="teste",
+    dag_id="GB",
     schedule_interval=None,
     start_date=datetime(2023, 2, 5),
     catchup=False,
-    tags=['teste'],
-    description='Teste',
+    tags=['gb','challenge'],
+    description='DAG to fill up data from spreadsheets and twitter data',
 ) as dag:
 
     def get_data_from_git(url:str, files_regex):
