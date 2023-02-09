@@ -23,6 +23,7 @@ resource "google_composer_environment" "gb-env" {
       zone         = var.zone
       machine_type = "n1-standard-1"
       disk_size_gb = 30
+      service_account = google_service_account.airflow_service_account
     }
     database_config {
       machine_type = "db-n1-standard-2"
@@ -44,4 +45,14 @@ resource "google_composer_environment" "gb-env" {
       }
     }
   }
+}
+
+resource "google_service_account" "airflow_service_account" {
+  account_id = "airflow"
+  display_name = "Airflow Service Account"
+}
+
+resource "google_project_iam_member" "airflow" {
+  member = format("serviceAccount:%s", google_service_account.airflow_service_account)
+  role = "roles/composer.worker" # example
 }
